@@ -1,0 +1,10 @@
+*.bin
+config.toml
+*.zip
+.arcconfig
+dist/
+vendors/
+
+.vscode/
+debug
+lil.bin
