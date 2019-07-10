@@ -1,14 +1,17 @@
-# User to send full url in response.
+# User to send full URL in response. If you are hosting under
+# some domain or path the add the full URL here.
 base_url = "http://localhost:8085"
-# Length of the short url.
+
+# Length of the short URL.
 url_length = 8
 
 [server]
-address = ":8085"
-read_timeout=5000
-write_timeout=5000
-keepalive_timeout=300000
-max_body_size=5120000
+# Server address
+address = "localhost:8085"
+read_timeout = 5000
+write_timeout = 5000
+keepalive_timeout = 300000
+max_body_size = 5120000
 
 [cache]
 address = "localhost:6379"

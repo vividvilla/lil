@@ -12,8 +12,8 @@ import (
 
 // Response represents response struct.
 type Response struct {
-	Data  interface{} `json:"data"`
-	Error interface{} `json:"error,omitempty"`
+	Data  interface{} `json:"data,omitempty"`
+	Error string      `json:"error,omitempty"`
 }
 
 func generateRandomString(n int) (string, error) {
@@ -89,8 +89,9 @@ func handleAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		handleRedirect(w, r)
-		// } else if r.Method == http.MethodDelete {
-		// 	handleDelete(w, r)
+	} else if r.Method == http.MethodDelete {
+		handleDelete(w, r)
+		return
 	} else {
 		sendResp(nil, fmt.Errorf("Method not allowed"), http.StatusMethodNotAllowed, w)
 	}
