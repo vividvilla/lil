@@ -42,8 +42,9 @@ curl http://localhost:8085/27Fo2rI2
 {
     "error":"Not found"
 }
-## Backend store
 ```
+
+## Backend store
 
 Currently Redis is the only backend store available but new stores can be easily
 added by implementing [store interface](store/store.go), for example here is the
