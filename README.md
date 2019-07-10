@@ -45,6 +45,7 @@ curl http://localhost:8085/27Fo2rI2
     "error":"Not found"
 }
 ## Backend store
+```
 
 Currently Redis is the only backend store available but new stores can be easily
 added by implementing [store interface](store/store.go), for example here is the
@@ -55,3 +56,4 @@ added by implementing [store interface](store/store.go), for example here is the
 - Basic auth for create and delete APIs. Currently this can be implemented
   behind reverse proxy like Nginx or API gateways like Kong, AWS API gateway.
 - Custom path for short URLs instead of random generated paths.
+- Redirect stats.
