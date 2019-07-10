@@ -4,7 +4,7 @@ Simple URL shortener based on Go.
 
 ## API
 
-`POST /new`         - Create short url for a given url. URI generated is random. `url` is the required param.
+`POST /new`         - Create a random short url for a given url. `url` is the only required param.
 
 `GET /<path>`       - Redirect to short url
 
