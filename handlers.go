@@ -44,8 +44,8 @@ func sendJSONResp(data interface{}, err error, code int, w http.ResponseWriter) 
 	if errJSON != nil {
 		log.Printf("error marshalling response: %v", errJSON)
 	}
-	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
 	w.Write(r)
 }
 
