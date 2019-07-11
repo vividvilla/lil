@@ -4,17 +4,17 @@ Simple URL shortener based on Go.
 
 ## API
 
-`POST /new`         - Create a random short url for a given url. `url` is the only required param.
+`POST /api/new`         - Create a random short url for a given url. `url` is the only required param.
 
-`GET /<path>`       - Redirect to short url
+`GET /<path>`       	- Redirect to actual URL.
 
-`DELETE /<path>`    - Delete a short URL
+`DELETE /api/<path>`    - Delete a short URL, where `path` is the short uri.
 
 ## Example
 
 ```sh
 # Create a new short url.
-curl -X POST "http://localhost:8085/new" -d "url=https://zerodha.com"
+curl -X POST "http://localhost:8085/api/new" -d "url=https://zerodha.com"
 
 # Full URL is returned as response.
 {
@@ -28,9 +28,9 @@ curl http://localhost:8085/27Fo2rI2
 <a href="https://zerodha.com">Moved Permanently</a>.
 
 # Delete a existing short URL.
-curl -X DELETE http://localhost:8085/27Fo2rI2
+curl -X DELETE http://localhost:8085/api/27Fo2rI2
 
-# Response if URL exisits.
+# Response if URL exists.
 {
     "data": true
 }

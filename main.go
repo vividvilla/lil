@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/gomodule/redigo/redis"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -115,12 +116,14 @@ func main() {
 		time.Duration(viper.GetDuration("cache.timeout"))*time.Millisecond,
 	))
 
-	router := http.NewServeMux()
-	// Handle all url which has to be redirect.
-	router.Handle("/", http.HandlerFunc(handleAll))
-	// Create new url.
-	router.Handle("/new", http.HandlerFunc(handleCreate))
+	// Routing
+	router := chi.NewRouter()
+	router.Get("/", http.HandlerFunc(handleWelcome))
+	router.Get("/{uri}", http.HandlerFunc(handleRedirect))
+	router.Delete("/api/{uri}", http.HandlerFunc(handleDelete))
+	router.Post("/api/new", http.HandlerFunc(handleCreate))
 
+	// Run server
 	server := &http.Server{
 		Addr:         viper.GetString("server.address"),
 		Handler:      router,
@@ -128,7 +131,6 @@ func main() {
 		WriteTimeout: viper.GetDuration("server.write_timeout") * time.Millisecond,
 		IdleTimeout:  viper.GetDuration("server.idle_timeout") * time.Millisecond,
 	}
-
 	log.Printf("listening on - %v", viper.GetString("server.address"))
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("error starting server: %v", err)
