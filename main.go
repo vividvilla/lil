@@ -60,7 +60,7 @@ func init() {
 		fmt.Println(f.FlagUsages())
 		os.Exit(0)
 	}
-	f.StringSlice("conf", []string{"config.toml"},
+	f.StringSliceP("config", "c", []string{"config.toml"},
 		"Path to one or more config files (will be merged in order)")
 	f.StringSliceP("datasource", "d", []string{}, "Path to data source plugin. Can specify multiple values.")
 	f.StringSliceP("messenger", "m", []string{}, "Path to messenger plugin. Can specify multiple values.")
@@ -69,7 +69,7 @@ func init() {
 	f.Parse(os.Args[1:])
 
 	// Read config from files.
-	cFiles, _ := f.GetStringSlice("conf")
+	cFiles, _ := f.GetStringSlice("config")
 	for _, c := range cFiles {
 		if err := kf.Load(file.Provider(c), toml.Parser()); err != nil {
 			log.Fatalf("error loading file: %v", err)
@@ -118,7 +118,7 @@ func main() {
 		WriteTimeout: kf.Duration("server.write_timeout") * time.Millisecond,
 		IdleTimeout:  kf.Duration("server.idle_timeout") * time.Millisecond,
 	}
-	log.Printf("listening on - %v", kf.String("server.address"))
+	log.Printf("listening on - %s", kf.String("server.address"))
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("error starting server: %v", err)
 	}

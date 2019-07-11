@@ -6,7 +6,7 @@ Simple URL shortener based on Go.
 
 `POST /api/new`         - Create a random short url for a given url. `url` is the only required param.
 
-`GET /<path>`       	- Redirect to actual URL.
+`GET /<path>`           - Redirect to actual URL.
 
 `DELETE /api/<path>`    - Delete a short URL, where `path` is the short uri.
 
