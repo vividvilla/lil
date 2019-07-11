@@ -9,8 +9,11 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/gomodule/redigo/redis"
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/posflag"
 	flag "github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"gitlab.zerodha.tech/commons/lil/store"
 	redisstore "gitlab.zerodha.tech/commons/lil/store/redis"
 )
@@ -21,6 +24,7 @@ var (
 	// Be sure to run the provided run script to inject correctly.
 	buildVersion   = "unknown"
 	buildDate      = "unknown"
+	kf             *koanf.Koanf
 	str            store.Store
 	baseURL        string
 	shortURLLength = 8
@@ -46,74 +50,57 @@ func getRedisPool(address string, password string, maxActive int, maxIdle int, t
 	}
 }
 
-// Package initialisation.
 func init() {
-	// Command line flags.
-	flagSet := flag.NewFlagSet("config", flag.ContinueOnError)
-	flagSet.Usage = func() {
-		fmt.Println(flagSet.FlagUsages())
+	// Init koanf.
+	kf = koanf.New(".")
+
+	// Initialize commandline flags.
+	f := flag.NewFlagSet("config", flag.ContinueOnError)
+	f.Usage = func() {
+		fmt.Println(f.FlagUsages())
 		os.Exit(0)
 	}
+	f.StringSlice("conf", []string{"config.toml"},
+		"Path to one or more config files (will be merged in order)")
+	f.StringSliceP("datasource", "d", []string{}, "Path to data source plugin. Can specify multiple values.")
+	f.StringSliceP("messenger", "m", []string{}, "Path to messenger plugin. Can specify multiple values.")
+	f.Bool("version", false, "Current version of the build.")
+	f.Bool("worker", false, "Run in worker mode.")
+	f.Parse(os.Args[1:])
 
-	// Setup the default configuration.
-	viper.SetConfigName("config")
-	viper.SetDefault("server.address", ":8085")
-
-	// Get config path from flag.
-	flagSet.StringSlice("config", []string{}, "Path to a config file to load. This can be specified multiple times and the config files will be merged in order")
-
-	// Override flags.
-	flagSet.String("server.address", ":8085", "Address to bind HTTP server")
-
-	// Other flags.
-	flagSet.BoolP("version", "v", false, "Current version of the build")
-
-	flagSet.Parse(os.Args[1:])
-	viper.BindPFlags(flagSet)
-
-	// Read default config file. Won't throw the error yet.
-	viper.AddConfigPath(".")
-	vErr := viper.ReadInConfig()
-
-	// Read explicit configs, if there are any.
-	cfgs := viper.GetStringSlice("config")
-	for _, c := range cfgs {
-		log.Printf("reading config: %s", c)
-		viper.SetConfigFile(c)
-		if err := viper.MergeInConfig(); err != nil {
-			log.Printf("error reading config: %v", err)
+	// Read config from files.
+	cFiles, _ := f.GetStringSlice("conf")
+	for _, c := range cFiles {
+		if err := kf.Load(file.Provider(c), toml.Parser()); err != nil {
+			log.Fatalf("error loading file: %v", err)
 		}
 	}
 
-	// Was there an error reading the default config.toml?
-	// It's okay as long as an additional config was read.
-	if vErr != nil {
-		if len(cfgs) == 0 {
-			log.Fatalf("no config was read: %v", vErr)
-		}
-		log.Println("WARNING: no default config was read")
+	// Overide config with flag values.
+	if err := kf.Load(posflag.Provider(f, ".", kf), nil); err != nil {
+		log.Fatalf("error loading config: %v", err)
 	}
 }
 
 func main() {
 	// Display version and exit
-	if viper.GetBool("version") {
+	if kf.Bool("version") {
 		fmt.Printf("Commit: %v\nBuild: %v\n", buildVersion, buildDate)
 		return
 	}
 	log.Printf("Version: %v | Build: %v\n", buildVersion, buildDate)
 
 	// Set base config
-	baseURL = viper.GetString("base_url")
-	shortURLLength = viper.GetInt("url_length")
+	baseURL = kf.String("base_url")
+	shortURLLength = kf.Int("url_length")
 
 	// Init redis pool
 	str = redisstore.New(getRedisPool(
-		viper.GetString("cache.address"),
-		viper.GetString("cache.password"),
-		viper.GetInt("cache.max_idle"),
-		viper.GetInt("cache.max_active"),
-		time.Duration(viper.GetDuration("cache.timeout"))*time.Millisecond,
+		kf.String("cache.address"),
+		kf.String("cache.password"),
+		kf.Int("cache.max_idle"),
+		kf.Int("cache.max_active"),
+		time.Duration(kf.Duration("cache.timeout"))*time.Millisecond,
 	))
 
 	// Routing
@@ -125,13 +112,13 @@ func main() {
 
 	// Run server
 	server := &http.Server{
-		Addr:         viper.GetString("server.address"),
+		Addr:         kf.String("server.address"),
 		Handler:      router,
-		ReadTimeout:  viper.GetDuration("server.read_timeout") * time.Millisecond,
-		WriteTimeout: viper.GetDuration("server.write_timeout") * time.Millisecond,
-		IdleTimeout:  viper.GetDuration("server.idle_timeout") * time.Millisecond,
+		ReadTimeout:  kf.Duration("server.read_timeout") * time.Millisecond,
+		WriteTimeout: kf.Duration("server.write_timeout") * time.Millisecond,
+		IdleTimeout:  kf.Duration("server.idle_timeout") * time.Millisecond,
 	}
-	log.Printf("listening on - %v", viper.GetString("server.address"))
+	log.Printf("listening on - %v", kf.String("server.address"))
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("error starting server: %v", err)
 	}
