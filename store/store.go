@@ -7,14 +7,27 @@ var (
 	ErrNotFound = errors.New("Not found")
 )
 
+// Meta represents.
+type Meta struct {
+	OGTags []*OGTag `json:"og_tags,omitempty"`
+	// Page title
+	Title string `json:"title,omitempty"`
+}
+
+// OGTag represents og tags.
+type OGTag struct {
+	Property string `json:"property"`
+	Content  string `json:"content"`
+}
+
 // Store represents backend storage for storing short urls.
 type Store interface {
-	// GetFullURL retrives full url for given short url it exists else send ErrNotFound.
-	GetFullURL(shortURL string) (string, error)
-	// GetShortURL retrives short url from a long url if it exists else send ErrNotFound.
-	GetShortURL(fullURL string) (string, error)
+	// Get id and meta for given full URL.
+	GetID(url string) (id string, err error)
+	// Get retrives payload from given id.
+	Get(id string) (url string, meta *Meta, err error)
 	// Set stores full url against short url (stores reverse map if needed).
-	Set(shortURL string, fullURL string) error
-	// Delete removes shorturl-fullurl if it exists.
-	Delete(shortURL string) error
+	Set(id string, url string, meta *Meta) (err error)
+	// Delete removes short url and meta from store.
+	Del(id string) (err error)
 }
