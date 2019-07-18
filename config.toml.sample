@@ -5,6 +5,9 @@ base_url = "http://localhost:8085"
 # Length of the short URL.
 url_length = 8
 
+# Template path for page redirects.
+redirect_template_path = ""
+
 [server]
 # Server address
 address = "localhost:8085"

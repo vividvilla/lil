@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/gomodule/redigo/redis"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/toml"
@@ -18,16 +20,22 @@ import (
 	redisstore "gitlab.zerodha.tech/commons/lil/store/redis"
 )
 
+const (
+	pageRedirectPrefix = "p"
+)
+
 var (
 	// Version of the build.
 	// This is injected at build-time.
 	// Be sure to run the provided run script to inject correctly.
-	buildVersion   = "unknown"
-	buildDate      = "unknown"
-	kf             *koanf.Koanf
-	str            store.Store
-	baseURL        string
-	shortURLLength = 8
+	buildVersion    = "unknown"
+	buildDate       = "unknown"
+	kf              *koanf.Koanf
+	str             store.Store
+	baseURL         string
+	redirectTpl     *template.Template
+	shortURLLength  = 8
+	redirectTplPath = "./templates/redirect_page.tpl"
 )
 
 func getRedisPool(address string, password string, maxActive int, maxIdle int, timeout time.Duration) *redis.Pool {
@@ -92,7 +100,21 @@ func main() {
 
 	// Set base config
 	baseURL = kf.String("base_url")
-	shortURLLength = kf.Int("url_length")
+
+	// Get optional configs.
+	if kf.Int("url_length") != 0 {
+		shortURLLength = kf.Int("url_length")
+	}
+	if kf.String("redirect_template_path") != "" {
+		redirectTplPath = kf.String("redirect_template_path")
+	}
+
+	// Load redirect template.
+	var err error
+	redirectTpl, err = template.ParseFiles(redirectTplPath)
+	if err != nil {
+		log.Fatalf("couldn't load redirect template: %v", err)
+	}
 
 	// Init redis pool
 	str = redisstore.New(getRedisPool(
@@ -105,8 +127,12 @@ func main() {
 
 	// Routing
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.RedirectSlashes)
 	router.Get("/", http.HandlerFunc(handleWelcome))
 	router.Get("/{uri}", http.HandlerFunc(handleRedirect))
+	router.Get(fmt.Sprintf("/%v/{uri}", pageRedirectPrefix), http.HandlerFunc(handlePageRedirect))
+	router.Get("/api/{uri}", http.HandlerFunc(handleGetRedirects))
 	router.Delete("/api/{uri}", http.HandlerFunc(handleDelete))
 	router.Post("/api/new", http.HandlerFunc(handleCreate))
 
