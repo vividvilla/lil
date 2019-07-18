@@ -4,43 +4,167 @@ Simple URL shortener based on Go.
 
 ## API
 
-`POST /api/new`         - Create a random short url for a given url. `url` is the only required param.
+### Redirect
 
-`GET /<path>`           - Redirect to actual URL.
+`GET /<id>`           - Redirects to target URL.
 
-`DELETE /api/<path>`    - Delete a short URL, where `path` is the short uri.
+### Redirect page
 
-## Example
+`GET /p/<id>`         - HTML page which redirects to target url. Page additionally renders
+                          OpenGraph tags specified while creating short url. Useful for sharing
+                          previewable link in social media sites.
 
-```sh
-# Create a new short url.
-curl -X POST "http://localhost:8085/api/new" -d "url=https://zerodha.com"
+### Create a short url
 
-# Full URL is returned as response.
+`POST /api/new` - Create a random short url for given url, accepts JSON post body.
+
+#### Params
+
+- `url`  - Target url to redirect.
+- `title` - Page title used in paged redirect.
+- `og_tags` - List of Open graph tags to be used in paged redirect.
+  - `property` - Open graph property tag
+  - `content` - Open graph content tag
+
+#### Response
+
+Response returns short uri ID, redirect url and page redirect url.
+
+```json
 {
-    "data": "http://localhost:8085/27Fo2rI2"
+    "data": {
+        "id": "<id>",
+        "url": "http://localhost/<id>",
+        "page": "http://localhost/p/<id>"
+    }
 }
+```
 
-# Use short URL.
-curl http://localhost:8085/27Fo2rI2
+### Get redirect links
 
-# Response shows its a permanent redirect our full URL.
-<a href="https://zerodha.com">Moved Permanently</a>.
+`GET /api/<id>` - Get redirect links for given short uri.
 
-# Delete a existing short URL.
-curl -X DELETE http://localhost:8085/api/27Fo2rI2
+#### Response
 
-# Response if URL exists.
+Response returns short uri ID, redirect url and page redirect url.
+
+```json
+{
+    "data": {
+        "id": "<id>",
+        "url": "http://localhost/<id>",
+        "page": "http://localhost/p/<id>"
+    }
+}
+```
+
+### Delete a short url
+
+`DELETE /api/<id>` - Delete a give short url.
+
+#### Response
+
+```json
 {
     "data": true
 }
+```
 
-# Try accessing delete URL again.
-curl http://localhost:8085/27Fo2rI2
+## Examples
+
+### Create a short url
+
+```
+# Request
+curl -X "POST" "http://localhost:8085/api/new" \
+     -H 'Content-Type: text/plain; charset=utf-8' \
+     -d $'{
+    "url": "https://zerodha.com",
+    "title": "Zerodha",
+    "og_tags": [
+        {"property": "og:image", "content": "https://zerodha.com/static/images/kite-dashboard.png"}
+    ]
+}'
 
 # Response
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
 {
-    "error":"Not found"
+    "data": {
+        "id": "72p9abOM",
+        "url": "http://localhost:8085/72p9abOM",
+        "page": "http://localhost:8085/p/72p9abOM"
+    }
+}
+```
+
+### Direct redirect
+
+```
+# Request
+curl http://localhost:8085/72p9abOM
+
+# Response
+HTTP/1.1 301 Moved Permanently
+Content-Type: text/html; charset=utf-8
+Location: https://zerodha.com
+
+<a href="https://zerodha.com">Moved Permanently</a>.
+```
+
+### Page redirect
+
+```
+# Page redirect which renders additional open graph data.
+curl http://localhost:8085/p/72p9abOM
+
+# Response
+HTTP/1.1 200 OK
+Date: Thu, 18 Jul 2019 08:14:03 GMT
+
+<html prefix="og: http://ogp.me/ns#">
+<head>
+    <title>Zerodha</title>
+    <meta property="og:image" content="https://zerodha.com/static/images/kite-dashboard.png" />
+    <script >
+        window.location.replace("https:\/\/zerodha.com");
+    </script>
+</head>
+</html>
+```
+
+### Get redirect links
+
+```
+# Request
+curl "http://localhost:8085/api/72p9abOM"
+
+# Response
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+    "data": {
+        "id": "72p9abOM",
+        "url": "http://localhost:8085/72p9abOM",
+        "page": "http://localhost:8085/p/72p9abOM"
+    }
+}
+```
+
+# Delete a short url
+
+```
+# Request
+curl -X "DELETE" "http://localhost:8085/api/72p9abOM"
+
+# Response
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+    "data": true
 }
 ```
 
