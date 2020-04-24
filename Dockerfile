@@ -9,6 +9,7 @@ RUN make build
 FROM alpine:latest AS deploy
 RUN apk --no-cache add bash ca-certificates
 WORKDIR /lil/
+COPY --from=builder /lil/templates ./templates
 COPY --from=builder /lil/lil.bin /lil/config.toml.sample ./
 RUN mkdir -p /etc/lil && cp config.toml.sample /etc/lil/config.toml
 # Define data volumes

@@ -28,9 +28,10 @@ type RedirectResponse struct {
 
 // Params represents input params used to create new short url.
 type Params struct {
-	URL    string         `json:"url"`
-	OGTags []*store.OGTag `json:"og_tags"`
-	Title  string         `json:"title"`
+	ShortURI string         `json:"short_uri"`
+	URL      string         `json:"url"`
+	OGTags   []*store.OGTag `json:"og_tags"`
+	Title    string         `json:"title"`
 }
 
 // generateRandomString generates a random string of given length n.
@@ -88,18 +89,32 @@ func createShortURL(params *Params) (string, error) {
 		err error
 		id  string
 	)
-	for {
-		// Generate random string.
-		id, err = generateRandomString(shortURLLength)
-		if err != nil {
-			return id, err
+
+	if params.ShortURI == "" {
+		for {
+			// Generate random string.
+			id, err = generateRandomString(shortURLLength)
+			if err != nil {
+				return id, err
+			}
+			// Try getting the url for new generated id.
+			// If its present then generate new id and check.
+			_, _, err := str.Get(id)
+			if err == store.ErrNotFound {
+				break
+			} else if err != nil {
+				return id, err
+			}
 		}
+	} else {
+		id = params.ShortURI
 		// Try getting the url for new generated id.
-		// If its present then generate new id and check.
-		_, _, err := str.Get(id)
-		if err == store.ErrNotFound {
-			break
-		} else if err != nil {
+		// If its present then throw an error.
+		u, _, err := str.Get(id)
+		if u != "" {
+			return id, fmt.Errorf("uri - `%s` already exists", id)
+		}
+		if err != nil && err != store.ErrNotFound {
 			return id, err
 		}
 	}
@@ -178,7 +193,7 @@ func handleCreate(w http.ResponseWriter, r *http.Request) {
 	// Create short url
 	id, err := createShortURL(params)
 	if err != nil {
-		// Send log.Printf("error creating url: %v", err)
+		log.Printf("error creating url: %v", err)
 		sendGeneralError(w)
 	} else {
 		sendJSONResp(redirectResponse(id), nil, http.StatusOK, w)
